@@ -43,7 +43,7 @@ def ontology = request.getParameter("ontology")?:""
 def type = request.getParameter("type")
 
 if (queryString == null && owlquerystring != null) {
-  def result = jsonslurper.parse(new URL("http://jagannath.pdn.cam.ac.uk/robbi/service/?type=$type&ontology=$ontology&query="+URLEncoder.encode(owlquerystring))) ;
+  def result = jsonslurper.parse(new URL("http://jagannath.pdn.cam.ac.uk/aber-owl/service/?type=$type&ontology=$ontology&query="+URLEncoder.encode(owlquerystring))) ;
   queryString = ""
   def max = 1023 // only 1024 query terms allows in Lucene
   if (result.size()<max) {
@@ -62,7 +62,7 @@ println """
 <html lang="us">
 <head>
 	<meta charset="utf-8">
-	<title>ROBBI-Pubmed: ontology-based access to Pubmed</title>
+	<title>Pubmed-OWL: ontology-based access to Pubmed</title>
 	<link href="css/smoothness/jquery-ui-1.10.4.custom.css" rel="stylesheet">
 	<script src="js/jquery-1.10.2.js"></script>
 	<script src="js/jquery-ui-1.10.4.custom.js"></script>
@@ -107,8 +107,7 @@ println """
 	</style>
 </head>
 <body>
-	<p class="menubar" align="right"><small><a href="help.html">Help</a></small></p>
-	<h1 class="title" title="Ontology-based access to Pubmed">ROBBI-Pubmed</h1>
+	<h1 class="title" title="Ontology-based access to Pubmed">Pubmed-OWL</h1>
 
   <br/><br/>
 
@@ -132,13 +131,16 @@ if (queryString) {
     String frag = highlighter.getBestFragment(analyzer, "abstract", hitDoc.get("abstract"))
     if (frag == null) {
       highlighter.setTextFragmenter(new SimpleFragmenter())
-      def bestFragment = highlighter.getBestFragments(analyzer, "text", hitDoc.get("text"), 5)
-      if (bestFragment) {
-	frag = "<em>No match found in abstract.</em> Full text matches: <ul>"
-	bestFragment.each {
-	  frag += "<li>$it</li>\n"
+      def text = hitDoc.get("text")
+      if (text != null) {
+	def bestFragment = highlighter.getBestFragments(analyzer, "text", text, 5)
+	if (bestFragment) {
+	  frag = "<em>No match found in abstract.</em> Full text matches: <ul>"
+	  bestFragment.each {
+	    frag += "<li>$it</li>\n"
+	  }
+	  frag += "</ul>"
 	}
-	frag += "</ul>"
       } else {
 	frag = highlighter.getBestFragment(analyzer, "title", hitDoc.get("title"))
       }
@@ -146,7 +148,13 @@ if (queryString) {
     def pmcid = hitDoc.get("pmcid")
     def pmid = hitDoc.get("pmid")
     def title = hitDoc.get("title")
-    println "<li><h3><a href=\"http://www.ncbi.nlm.nih.gov/pmc/articles/PMC$docid\">$title</a></h3><p>$frag</p>"
+    if (pmid!=null) {
+      println "<li><h3><a href=\"http://www.ncbi.nlm.nih.gov/pubmed/$pmid\">$title</a></h3>"
+      if (pmcid!=null) {
+	println "<p><a href=\"http://www.ncbi.nlm.nih.gov/pmc/articles/PMC$pmcid\">Full text available.</a></p>"
+      }
+      println "<p>$frag</p></li>"
+    }
   }
 }
 

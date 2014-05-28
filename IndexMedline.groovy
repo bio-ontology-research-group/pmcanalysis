@@ -65,6 +65,7 @@ new File("pmc").eachDir { dir ->
 	def articleText = art.body.text()
 	Document doc = new Document()
 	doc.add(new Field("pmcid", pmcid, Field.Store.YES, Field.Index.NO))
+	doc.add(new Field("pmid", pmid, Field.Store.YES, Field.Index.NO))
 	doc.add(new Field("title", title, TextField.TYPE_STORED))
 	doc.add(new Field("abstract", articleAbstract, TextField.TYPE_STORED))
 	doc.add(new Field("text", articleText, TextField.TYPE_STORED))
