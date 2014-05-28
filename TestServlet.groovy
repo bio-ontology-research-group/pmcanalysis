@@ -7,8 +7,16 @@ import org.apache.lucene.util.*
 import org.apache.lucene.search.*
 import org.apache.lucene.queryparser.classic.*
 import org.apache.lucene.search.highlight.*
+import groovy.json.*
 
-String indexPath = "lucene-pmc/"
+def jsonslurper = new JsonSlurper()
+
+String indexPath = "lucene-medline-pmc/"
+
+def forward(page, req, res){
+  def dis = req.getRequestDispatcher(page);
+  dis.forward(req, res);
+}
 
 if (!application) {
   application = request.getApplication(true);
@@ -30,33 +38,124 @@ if (!application.searcher) {
 }
 
 def queryString = request.getParameter("query")
+def owlquerystring = request.getParameter("owlquery")
+def ontology = request.getParameter("ontology")?:""
+def type = request.getParameter("type")
+
+if (queryString == null && owlquerystring != null) {
+  def result = jsonslurper.parse(new URL("http://jagannath.pdn.cam.ac.uk/robbi/service/?type=$type&ontology=$ontology&query="+URLEncoder.encode(owlquerystring))) ;
+  queryString = ""
+  def max = 1023 // only 1024 query terms allows in Lucene
+  if (result.size()<max) {
+    max = -1
+  }
+  result[0..max].each { res ->
+    if (res.label) {
+      queryString += "\"${res.label}\" OR "
+    }
+  }
+}
+queryString = queryString.substring(0,queryString.length()-3)
+
+println """
+<!doctype html>
+<html lang="us">
+<head>
+	<meta charset="utf-8">
+	<title>ROBBI-Pubmed: ontology-based access to Pubmed</title>
+	<link href="css/smoothness/jquery-ui-1.10.4.custom.css" rel="stylesheet">
+	<script src="js/jquery-1.10.2.js"></script>
+	<script src="js/jquery-ui-1.10.4.custom.js"></script>
+	<style>
+	body{
+		font: 100% "Trebuchet MS", sans-serif;
+		margin: 80px;
+	}
+	.menubar {
+	  position: fixed;
+	  top: 0;
+	  left: 0;
+	  z-index: 999;
+	  width: 95%;
+	}
+	.demoHeaders {
+		margin-top: 2em;
+	}
+	#icons {
+		margin: 0;
+		padding: 0;
+	}
+	#icons li {
+		margin: 2px;
+		position: relative;
+		padding: 4px 0;
+		cursor: pointer;
+		float: left;
+		list-style: none;
+	}
+	#icons span.ui-icon {
+		float: left;
+		margin: 0 4px;
+	}
+	.fakewindowcontain .ui-widget-overlay {
+		position: absolute;
+	}
+	.title {
+		text-align: center;
+		margin: 0px;
+	}
+	</style>
+</head>
+<body>
+	<p class="menubar" align="right"><small><a href="help.html">Help</a></small></p>
+	<h1 class="title" title="Ontology-based access to Pubmed">ROBBI-Pubmed</h1>
+
+  <br/><br/>
+
+<p>
+  <div id="results">
+   <ul>
+"""
+
+
 def parser = application.parser
 def searcher = application.searcher
 def analyzer = application.analyzer
 if (queryString) {
-  Query query = parser.parse("$queryString")
+  Query query = parser.parse("abstract:($queryString) OR text:($queryString) OR title:($queryString)")
   ScoreDoc[] hits = searcher.search(query, null, 1000, Sort.RELEVANCE, true, true).scoreDocs
-  html.html {
-    head {
-      title("PMC Query")
-    }
-    body {
-      hits.each { doc ->
-	Document hitDoc = searcher.doc(doc.doc)
-	SimpleHTMLFormatter htmlFormatter = new SimpleHTMLFormatter()
-	Highlighter highlighter = new Highlighter(htmlFormatter, new QueryScorer(query))
-	String[] frags = highlighter.getBestFragments(analyzer, "text", hitDoc.get("text"), 5)
-	def frag = ""
-	frags.each { frag += it+"..." }
-	def docid = hitDoc.get("pmcid")
-	def title = hitDoc.get("title")
-	p {
-	  a(href:"http://www.ncbi.nlm.nih.gov/pmc/$docid", title)
+  hits.each { doc ->
+    Document hitDoc = searcher.doc(doc.doc)
+    SimpleHTMLFormatter htmlFormatter = new SimpleHTMLFormatter()
+    Highlighter highlighter = new Highlighter(htmlFormatter, new QueryScorer(query))
+    highlighter.setTextFragmenter(new NullFragmenter())
+    String frag = highlighter.getBestFragment(analyzer, "abstract", hitDoc.get("abstract"))
+    if (frag == null) {
+      highlighter.setTextFragmenter(new SimpleFragmenter())
+      def bestFragment = highlighter.getBestFragments(analyzer, "text", hitDoc.get("text"), 5)
+      if (bestFragment) {
+	frag = "<em>No match found in abstract.</em> Full text matches: <ul>"
+	bestFragment.each {
+	  frag += "<li>$it</li>\n"
 	}
-	p {
-	  println frag
-	}
+	frag += "</ul>"
+      } else {
+	frag = highlighter.getBestFragment(analyzer, "title", hitDoc.get("title"))
       }
     }
+    def pmcid = hitDoc.get("pmcid")
+    def pmid = hitDoc.get("pmid")
+    def title = hitDoc.get("title")
+    println "<li><h3><a href=\"http://www.ncbi.nlm.nih.gov/pmc/articles/PMC$docid\">$title</a></h3><p>$frag</p>"
   }
 }
+
+println """
+   </ul>
+  </div>
+
+</p>
+
+</body>
+</html>
+"""
