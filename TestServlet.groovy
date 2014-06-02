@@ -62,7 +62,7 @@ println """
 <html lang="us">
 <head>
 	<meta charset="utf-8">
-	<title>Pubmed-OWL: ontology-based access to Pubmed</title>
+	<title>Aber-OWL: Pubmed - ontology-based access to biomedical literature</title>
 	<link href="css/smoothness/jquery-ui-1.10.4.custom.css" rel="stylesheet">
 	<script src="js/jquery-1.10.2.js"></script>
 	<script src="js/jquery-ui-1.10.4.custom.js"></script>
@@ -107,7 +107,7 @@ println """
 	</style>
 </head>
 <body>
-	<h1 class="title" title="Ontology-based access to Pubmed">Pubmed-OWL</h1>
+	<h1 class="title" title="Ontology-based access to biomedical literature">Aber-OWL: Pubmed</h1>
 
   <br/><br/>
 
