@@ -40,7 +40,7 @@ if (!application.searcher) {
 def textquerystring = request.getParameter("query")
 def owlquerystring = request.getParameter("owlquery")
 def ontology = request.getParameter("ontology")?:""
-def output = request.getParameter("output")?:""
+def output = request.getParameter("output")
 def type = request.getParameter("type")
 def queryString = null
 
@@ -68,7 +68,7 @@ if (textquerystring == null) {
   textquerystring = ""
 }
 
-if (output==null || output=="text") { // text output
+if (output==null) { // text output
 println """<!doctype html>
 <html lang="us">
 <head>
@@ -266,6 +266,9 @@ if (queryString) {
       } else {
 	frag = highlighter.getBestFragment(analyzer, "title", hitDoc.get("title"))
       }
+    }
+    if (frag == null) { // fallback
+      frag = hitDoc.get("abstract")
     }
     def pmcid = hitDoc.get("pmcid")
     def pmid = hitDoc.get("pmid")
