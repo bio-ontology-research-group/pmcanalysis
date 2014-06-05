@@ -107,12 +107,83 @@ println """<!doctype html>
 	  dataType: 'json',
 	  success: function( json ) {
             \$.each(json, function(i, value) {
-              \$('#ontologyselector').append(\$('<option>').text(value).attr('value', value));
-            
+              if (value == "$ontology") {
+                \$('#ontology').append(\$('<option selected="selected">').text(value).attr('value', value));
+              } else {
+                \$('#ontology').append(\$('<option>').text(value).attr('value', value));
+              }            
                });
 	    }
          });
         });
+
+
+
+    function split( val ) {
+      return val.split( /\\s/ );
+    }
+    function extractLast( term ) {
+      return split( term ).pop();
+    }
+\$(function() {
+		
+	
+		
+            \$( "#button" ).button();
+	    \$( "#radioset" ).buttonset();
+
+		\$( "#autocomplete" )
+		.bind( "keydown", function( event ) {
+		    	if ( event.keyCode === \$.ui.keyCode.TAB &&
+            		\$( this ).data( "ui-autocomplete" ).menu.active ) {
+          		event.preventDefault();
+        		}
+      		})
+		.autocomplete({
+		    minLength: 3,
+		    source: function( request, response ) {
+			var ontology = \$( "#ontology option:selected" ).text();
+			\$.getJSON( "../service/", {
+			    term: extractLast( request.term ),
+			    ontology : ontology,
+			}, response );
+		    },
+		    search: function() {
+			// custom minLength
+			var term = extractLast( this.value );
+			if ( term.length < 3 ) {
+			    return false;
+			}
+		    },
+		    focus: function() {
+			// prevent value inserted on focus
+			return false;
+		    },
+		    select: function( event, ui ) {
+			var terms = split( this.value );
+			// remove the current input
+			terms.pop();
+			// add the selected item
+			terms.push( ui.item.value );
+			// add placeholder to get the comma-and-space at the end
+			terms.push( "" );
+			this.value = terms.join( " " );
+			return false;
+		    }
+		})
+	.data( "ui-autocomplete" )._renderItem = function( ul, item ) {
+	    return \$( "<li>" )
+		.append( "<a>" + item.label +"</a>" )
+		.appendTo( ul );
+	};
+		
+		
+		
+	});
+
+
+
+
 </script>
 	<style>
 	body{
@@ -154,16 +225,24 @@ println """<!doctype html>
 	}
 	.list {
 	  font-family:sans-serif;
-	  margin:0;
 	  padding:20px 0 0;
 	}
 	.list > li {
+	  font: 80% "Trebuchet MS", sans-serif;
 	  display:block;
 	  background-color: #eee;
 	  padding:10px;
 	  box-shadow: inset 0 1px 0 #fff;
 	}
-	.list > h3 {
+	.list > li > h3 {
+	  font: 100% "Trebuchet MS", sans-serif;
+	  font-size: 16px;
+	  margin:0 0 0.3rem;
+	  font-weight: normal;
+	  font-weight:bold;
+	}
+	.list > li > article {
+	  font: 80% "Trebuchet MS", sans-serif;
 	  font-size: 16px;
 	  margin:0 0 0.3rem;
 	  font-weight: normal;
@@ -210,14 +289,14 @@ println '><label for="radio1">Subclasses</label>'
 println """
       </center>
       <center>
-	<select id="ontologyselector" name="ontologyselector">
-	  <option selected="selected" value=""></option>
+	<select id="ontology" name="ontology">
+	  <option value=""></option>
 	</select>
 
       </center>
     </div>
 
-    <center> <input size=100% title=\"OWL query\" type='text' name='owlquery' value=\"$owlquerystring\" />
+    <center> <input id="autocomplete" size=100% title=\"OWL query\" type='text' name='owlquery' value=\"$owlquerystring\" />
 <br><br>
     <center>
       <input type=submit id="button" value="Submit">
