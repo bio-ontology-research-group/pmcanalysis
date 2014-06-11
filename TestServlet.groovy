@@ -42,6 +42,9 @@ def owlquerystring = request.getParameter("owlquery")
 def ontology = request.getParameter("ontology")?:""
 def output = request.getParameter("output")
 def type = request.getParameter("type")
+if (owlquerystring == null) {
+  owlquerystring = ""
+}
 def queryString = null
 
 if (owlquerystring != null) {
@@ -267,6 +270,7 @@ println """<!doctype html>
 	</style>
 </head>
 <body>
+	<p class="menubar" align="right"><small><a href="../help.html">Help</a></small></p>
 	<h1 class="title" title="Ontology-based access to biomedical literature">Aber-OWL: Pubmed</h1>
 
 <div id='searchbar'>
