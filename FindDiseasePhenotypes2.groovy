@@ -188,13 +188,13 @@ tempSet.each { pmid ->
 }
 
 println "Generating BitSets..."
-Map<String, Set<String>> bmid2pmid = [:]
+Map<String, Set<String>> bsid2pmid = [:]
 id2pmid.each { k, v ->
   OpenBitSet bs = new OpenBitSet(corpussize)
   v.each { pmid ->
     bs.set(indexPMID[pmid])
   }
-  bmid2pmid[k] = bs
+  bsid2pmid[k] = bs
 }
 
 bsid2pmid.findAll { k, v -> k.indexOf("DOID")>-1 }.each { doid, pmids1 ->
