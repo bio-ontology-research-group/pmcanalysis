@@ -177,6 +177,9 @@ id2pmid.each { k, v ->
 }
 def corpussize = tempSet.size()
 
+println "Corpussize $corpussize..."
+
+println "Indexing PMIDs..."
 def indexPMID = [:]
 def count = 0
 tempSet.each { pmid ->
@@ -184,21 +187,22 @@ tempSet.each { pmid ->
   count += 1
 }
 
+println "Generating BitSets..."
 Map<String, Set<String>> bmid2pmid = [:]
 id2pmid.each { k, v ->
-  BitSet bs = new BitSet(corpussize)
+  OpenBitSet bs = new OpenBitSet(corpussize)
   v.each { pmid ->
     bs.set(indexPMID[pmid])
   }
   bmid2pmid[k] = bs
 }
 
-println "Corpussize $corpussize..."
-id2pmid.findAll { k, v -> k.indexOf("DOID")>-1 }.each { doid, pmids1 ->
-  id2pmid.findAll { k, v -> (k.indexOf("HP")>-1 || k.indexOf("MP")>-1 ) }.each { pid, pmids2 ->
-    def nab = pmids1.intersect(pmids2).size()
-    def na = pmids1.size()
-    def nb = pmids2.size()
+bsid2pmid.findAll { k, v -> k.indexOf("DOID")>-1 }.each { doid, pmids1 ->
+  println "  Computing on $doid..."
+  bsid2pmid.findAll { k, v -> (k.indexOf("HP")>-1 || k.indexOf("MP")>-1 ) }.each { pid, pmids2 ->
+    def nab = OpenBitSet.intersectionCount(pmids1, pmids2)
+    def na = pmids1.cardinality()
+    def nb = pmids2.cardinality()
     def tscore = tscore(corpussize, na, nb, nab)
     def pmi = npmi(corpussize, na, nb, nab)
     def zscore = zscore(corpussize, na, nb, nab)
