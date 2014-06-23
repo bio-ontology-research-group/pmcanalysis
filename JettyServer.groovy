@@ -17,7 +17,6 @@ def startJetty() {
 
   context.resourceBase = '.'  
   context.addServlet(GroovyServlet, '/TestServlet.groovy')  
-  context.addServlet(TemplateServlet, '/gsp/PubmedTemplate.gsp')  
   context.setAttribute('version', '1.0')  
   server.start()
 }

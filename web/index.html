@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="us">
+<head>
+	<meta charset="utf-8">
+	<title>Semantically mined Disease Phenotypes</title>
+	<link href="../css/smoothness/jquery-ui-1.10.4.custom.css" rel="stylesheet">
+	<link href="../css/dataTables.jqueryui.css" rel="stylesheet">
+	<script src="../js/jquery-1.10.2.js"></script>
+	<script src="../js/jquery-ui-1.10.4.custom.js"></script>
+	<script src="../js/jquery.dataTables.js"></script>
+	<script src="../js/dataTables.jqueryui.js"></script>
+    <script>
+    function redrawTable(id) {
+	$('#example').dataTable().fnDestroy();
+	$('#example').dataTable( {
+            "processing": false,
+            "serverSide": false,
+	    "paging": true,
+	    "scrollY": 400,
+	    "renderer": "bootstrap",
+	    "aaSorting": [[ 2, "desc" ]],
+	    "bAutoWidth": false,
+	    "iDisplayLength": 50,
+	    "bJQueryUI": true,
+	    aoColumns : [
+		{ "sWidth": "50%"},
+		{ "sWidth": "10%"},
+		{ "sWidth": "10%"},
+		{ "sWidth": "10%"},
+		{ "sWidth": "10%"},
+		{ "sWidth": "10%"},
+	    ],
+            "ajax": {
+		"url": "../dopheno/?type=phenotypes&q="+id,
+		"dataSrc": function ( json ) {
+                    var datatable = new Array() ;
+                    for ( var i=0, ien=json.length ; i<ien ; i++ ) {
+			datatable[i] = new Array() ;
+			datatable[i][0] = json[i].mpnames.join(", ")
+			datatable[i][1] = json[i].mp;
+			datatable[i][2] = json[i].pmi ;
+			datatable[i][3] = json[i].tscore ;
+			datatable[i][4] = json[i].zscore ;
+			datatable[i][5] = json[i].lmi ;
+			
+                    }
+                    return datatable;
+		}
+            }
+	} );
+    }
+$(function() {
+
+    $( "#autocomplete" )
+	.bind( "keydown", function( event ) {
+	    if ( event.keyCode === $.ui.keyCode.TAB &&
+            	 $( this ).data( "ui-autocomplete" ).menu.active ) {
+          	event.preventDefault();
+            }
+      	})
+	.autocomplete({
+	    minLength: 1,
+	    source: function( request, response ) {
+		$.getJSON( "../dopheno/", {
+		    type: "names",
+		    q: request.term,
+		}, response );
+	    },
+	    select: function( event, ui ) {
+		$(".demoHeaders").replaceWith("<h2>Phenotypes for "+ui.item.label+"</h2>");
+		$("#autocomplete").val(ui.item.label);
+		redrawTable(ui.item.id);
+		return false;
+            }
+	})
+	.data( "ui-autocomplete" )._renderItem = function( ul, item ) {
+	    return $( "<li>" )
+		.append( "<a>" + item.label +" (<tt>"+item.id+"</tt>)</a>" )
+		.appendTo( ul );
+	};
+});
+</script>
+	<style>
+	table.display {
+  	  	margin: 0 auto;
+  		width: 100%;
+  		clear: both;
+  		border-collapse: collapse;
+		table-layout: fixed;         // add this 
+		word-wrap:break-word;        // add this 
+	}
+	table{
+		font: 80% "Trebuchet MS", sans-serif;
+		margin: 80px;
+	}
+	body{
+		font: 100% "Trebuchet MS", sans-serif;
+		margin: 80px;
+	}
+	.menubar {
+	  position: fixed;
+	  top: 0;
+	  left: 0;
+	  z-index: 999;
+	  width: 95%;
+	}
+	.menubarleft {
+	  position: fixed;
+	  top: 0;
+	  left: 20px;
+	  z-index: 999;
+	  width: 95%;
+	  display: none;
+	}
+	.demoHeaders {
+		margin-top: 2em;
+	}
+	#icons {
+		margin: 0;
+		padding: 0;
+	}
+	.display thead {
+		display: none;
+	}
+	#icons li {
+		margin: 2px;
+		position: relative;
+		padding: 4px 0;
+		cursor: pointer;
+		float: left;
+		list-style: none;
+	}
+	#icons span.ui-icon {
+		float: left;
+		margin: 0 4px;
+	}
+	.fakewindowcontain .ui-widget-overlay {
+		position: absolute;
+	}
+	.title {
+		text-align: center;
+		margin: 0px;
+	}
+	</style>
+</head>
+<body>
+	<h1 class="title" title="Semantically mined disease
+	phenotypes">Disease Phenotypes</h1>
+
+  <br/><br/>
+
+  <!-- Autocomplete -->
+
+    <center>    <input size=100% onclick="this.value='';" id="autocomplete" title="Disease name"> </center>
+
+<p>
+  <div id="results">
+    <h2 class="demoHeaders">Select a disease</h2>
+
+    <table id="example" class="display" cellspacing="0"
+	   width="100%">
+      <thead id="headers">
+	<tr>
+          <th>Phenotype</th>
+          <th>ID</th>
+          <th>Score 1</th>
+          <th>Score 2</th>
+          <th>Score 3</th>
+          <th>Score 4</th>
+	</tr>
+      </thead>
+    </table>
+  </div>
+
+</p>
+
+</body>
+</html>
