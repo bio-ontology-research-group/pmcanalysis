@@ -70,7 +70,7 @@ $(function() {
 		}, response );
 	    },
 	    select: function( event, ui ) {
-		$(".demoHeaders").replaceWith("<h2>Phenotypes for "+ui.item.label+"</h2>");
+		$(".demoHeaders").replaceWith("<h2 class=\"demoHeaders\">Phenotypes for "+ui.item.label+"</h2>");
 		$("#autocomplete").val(ui.item.label);
 		redrawTable(ui.item.id);
 		return false;
