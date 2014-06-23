@@ -11,6 +11,9 @@
 	<script src="../js/dataTables.jqueryui.js"></script>
     <script>
     function redrawTable(id) {
+	$('thead').css({
+		display: "table-header-group"
+	});
 	$('#example').dataTable().fnDestroy();
 	$('#example').dataTable( {
             "processing": false,
@@ -20,7 +23,7 @@
 	    "renderer": "bootstrap",
 	    "aaSorting": [[ 2, "desc" ]],
 	    "bAutoWidth": false,
-	    "iDisplayLength": 50,
+	    "iDisplayLength": 100,
 	    "bJQueryUI": true,
 	    aoColumns : [
 		{ "sWidth": "50%"},
@@ -119,7 +122,7 @@ $(function() {
 		margin: 0;
 		padding: 0;
 	}
-	.display thead {
+	thead {
 		display: none;
 	}
 	#icons li {
@@ -151,22 +154,28 @@ $(function() {
 
   <!-- Autocomplete -->
 
-    <center>    <input size=100% onclick="this.value='';" id="autocomplete" title="Disease name"> </center>
+    <center>    <input size=100% onclick="this.value='';"
+    id="autocomplete" title="Disease name" value="Enter disease name..."> </center>
 
 <p>
   <div id="results">
-    <h2 class="demoHeaders">Select a disease</h2>
+    <h2 class="demoHeaders"></h2>
 
-    <table id="example" class="display" cellspacing="0"
-	   width="100%">
+    <table id="example" cellspacing="0" width="100%">
+    <col style="width: 50%"/>
+        <col style="width: 10%"/>
+        <col style="width: 10%"/>
+        <col style="width: 10%"/>
+        <col style="width: 10%"/>
+        <col style="width: 10%"/>
       <thead id="headers">
 	<tr>
           <th>Phenotype</th>
           <th>ID</th>
-          <th>Score 1</th>
-          <th>Score 2</th>
-          <th>Score 3</th>
-          <th>Score 4</th>
+          <th>Pointwise Mutual Information</th>
+          <th>T-Score</th>
+          <th>Z-Score</th>
+          <th>Lexicographer's Mutual Information</th>
 	</tr>
       </thead>
     </table>
