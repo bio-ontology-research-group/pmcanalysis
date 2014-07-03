@@ -15,7 +15,7 @@ import org.semanticweb.owlapi.util.*
 import org.semanticweb.elk.owlapi.*
 import groovy.json.*
 
-def fout = new PrintWriter(new BufferedWriter(new FileWriter("doid2hpo-fulltext.txt")))
+def fout = new PrintWriter(new BufferedWriter(new FileWriter("drugs2hpo.txt")))
 
 Double npmi(Double total, Double x, Double y, Double xy) {
   Double px = x/total
@@ -37,14 +37,6 @@ Double zscore(Double total, Double x, Double y, Double xy) {
 Double lmi(Double total, Double x, Double y, Double xy) {
   return xy * Math.log(total * xy / (x * y))
 }
-
-Double lgl(Double total, Double x, Double y, Double xy) {
-  def lambda = total * Math.log(total) - x * Math.log(x) - y * Math.log(y) + xy * Math.log(xy) + (total - x -y + xy)*Math.log(total - x -y + xy) + (x - xy) * Math.log(x-xy) + (y - xy) * Math.log(y-xy) - (total - x) * Math.log(total-x) - (total-y) * Math.log(total - y)
-
-  return xy < (x*y/total) ? -2*Math.log(lambda) : 2*Math.log(lambda)
-}
-
-
 
 def jsonslurper = new JsonSlurper()
 
@@ -131,7 +123,8 @@ def parseOntologies = { filename ->
 
 parseOntologies("ontologies/mammalian_phenotype.obo")
 parseOntologies("ontologies/human-phenotype-ontology.obo")
-parseOntologies("ontologies/HumanDO.obo")
+parseOntologies("ontologies/chebi.obo")
+
 
 BooleanQuery.setMaxClauseCount(2048)
 id2name.each { k, v ->
@@ -142,7 +135,7 @@ id2name.each { k, v ->
   s.each { i ->
     id2name[i]?.each { name ->
       try {
-	Query q = builder.createBooleanQuery("text", "\"$name\"")
+	Query q = builder.createBooleanQuery("abstract", "\"$name\"")
 	query.add(q, BooleanClause.Occur.SHOULD)
 	//	q = builder.createBooleanQuery("title", "\"$name\"")
 	//	query.add(q, BooleanClause.Occur.SHOULD)
@@ -204,7 +197,7 @@ id2pmid.each { k, v ->
   bsid2pmid[k] = bs
 }
 
-bsid2pmid.findAll { k, v -> k.indexOf("DOID")>-1 }.each { doid, pmids1 ->
+bsid2pmid.findAll { k, v -> k.indexOf("CHEBI")>-1 }.each { doid, pmids1 ->
   println "  Computing on $doid..."
   bsid2pmid.findAll { k, v -> (k.indexOf("HP")>-1 || k.indexOf("MP")>-1 ) }.each { pid, pmids2 ->
     def nab = OpenBitSet.intersectionCount(pmids1, pmids2)
@@ -214,10 +207,11 @@ bsid2pmid.findAll { k, v -> k.indexOf("DOID")>-1 }.each { doid, pmids1 ->
     def pmi = npmi(corpussize, na, nb, nab)
     def zscore = zscore(corpussize, na, nb, nab)
     def lmi = lmi(corpussize, na, nb, nab)
-    def lgl = lgl(corpussize, na, nb, nab)
     def name1 = id2name[doid]
     def name2 = id2name[pid]
-    fout.println("$doid\t$pid\t$tscore\t$zscore\t$lmi\t$pmi\t$lgl$nab\t$na\t$nb\t$name1\t$name2")
+    if (pmi >= 0.1 && pmi <=1) {
+      fout.println("$doid\t$pid\t$tscore\t$zscore\t$lmi\t$pmi\t$nab\t$na\t$nb\t$name1\t$name2")
+    }
   }
 }
 

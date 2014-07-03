@@ -17,12 +17,29 @@ class DoPhenoServer extends HttpServlet {
   public final static String disfilename = "doid2hpo.txt"
   def requestHandler
   def context
+  def id2name = [:]
   void init(ServletConfig config) {
     super.init(config)
     context = config.servletContext
-
-
   }
+
+  public DoPhenoServer() {
+    def id = ""
+    def readNames = { fn -> 
+      new File(fn).eachLine { line ->
+	if (line.startsWith("id:")) {
+	  id = line.substring(3).trim()
+	}
+	if (line.startsWith("name:")) {
+	  id2name[id] = line.substring(5).trim()
+	}
+      }
+    }
+    readNames("ontologies/HumanDO.obo")
+    readNames("ontologies/human-phenotype-ontology.obo")
+    readNames("ontologies/mammalian_phenotype.obo")
+  }
+
   void service(HttpServletRequest request, HttpServletResponse response) {
     requestHandler.binding = new ServletBinding(request, response, context)
     use (ServletCategory) {
@@ -43,33 +60,32 @@ class DoPhenoServer extends HttpServlet {
     Map pheno2name = [:].withDefault { new TreeSet() }
     println "Reading file..."
     new File(disfilename).splitEachLine("\t") { line ->
-      def doid = line[0]
-      Expando exp = new Expando()
-      exp.mp = line[1]
-      exp.tscore = new Double(line[2])
-      exp.zscore = new Double(line[3])
-      exp.lmi = new Double(line[4])
-      exp.pmi = new Double(line[5])
-      exp.cooc = new Integer(line[6])
-      exp.mpnames = []
-      dismap[doid].add(exp)
-      def dname = line[9].trim()
-      dname = dname.substring(1, dname.length()-1)
-      def pname = line[10]
-      pname = pname.substring(1, pname.length()-1)
-      dname.split(",").each { 
-	it = it.trim()
-	if (it.length()>0) {
-	  dis2name[doid].add(it)
-	  name2doid[it].add(doid)
-	  try {
-	    donames.insert(it.toLowerCase()+" ($doid)", 10000 - it.length())
-	  } catch (IllegalStateException E) {}
+      try {
+	def doid = line[0]
+	Expando exp = new Expando()
+	exp.mp = line[1]
+	exp.tscore = new Double(line[2])
+	exp.zscore = new Double(line[3])
+	exp.lmi = new Double(line[4])
+	exp.pmi = new Double(line[5])
+	exp.chi = new Double(line[6])
+	//	exp.mean = new Double(line[7])
+	dismap[doid].add(exp)
+	exp.mpname = id2name[exp.mp]
+	def dname = line[9].trim()
+	dname = dname.substring(1, dname.length()-1)
+	dname.split(",").each { 
+	  it = it.trim()
+	  if (it.length()>0) {
+	    dis2name[doid].add(it)
+	    name2doid[it].add(doid)
+	    try {
+	      donames.insert(it.toLowerCase()+" ($doid)", 10000 - it.length())
+	    } catch (IllegalStateException E) {}
+	  }
 	}
-      }
-      pname.split(",").each { 
-	pheno2name[exp.mp].add(it.trim()) 
-	exp.mpnames << it.trim()
+      } catch (Exception E) {
+	//	E.printStackTrace()
       }
     }
     context.setAttribute("dis2name", dis2name)

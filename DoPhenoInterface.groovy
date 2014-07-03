@@ -32,7 +32,19 @@ if (rtype == "names" && query) {
     }
   }
 } else if (query) {
+  def lsize = dismap[query]?.size()
   dismap[query]?.each { exp ->
+    /*
+    def ts = dismap[query]?.sort { it.tscore }.indexOf(exp) / lsize
+    def pmi = dismap[query]?.sort { it.pmi }.indexOf(exp) / lsize
+    def zs = dismap[query]?.sort { it.zscore }.indexOf(exp) /lsize
+    def lmi = dismap[query]?.sort { it.lmi }.indexOf(exp) /lsize
+    exp.ts = ts
+    exp.pm = pmi
+    exp.zs = zs
+    exp.lmi = lmi
+    exp.mean = Math.pow(ts * pmi * zs * lmi, 1/4)
+    */
     l << exp
   }
 }

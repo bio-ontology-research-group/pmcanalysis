@@ -37,36 +37,52 @@ if (!application.searcher) {
 
 }
 
+def parser = application.parser
+def searcher = application.searcher
+def analyzer = application.analyzer
+QueryBuilder builder = new QueryBuilder(analyzer)
+
 def textquerystring = request.getParameter("query")
-def owlquerystring = request.getParameter("owlquery")
+def owlquerystring = request.getParameterValues("owlquery")
 def ontology = request.getParameter("ontology")?:""
 def output = request.getParameter("output")
 def type = request.getParameter("type")
-if (owlquerystring == null) {
-  owlquerystring = ""
-}
+
 def queryString = null
 
+BooleanQuery.setMaxClauseCount(1024)
+
+BooleanQuery luceneQuery = new BooleanQuery()
 if (owlquerystring != null) {
-  def result = jsonslurper.parse(new URL("http://jagannath.pdn.cam.ac.uk/aber-owl/service/?type=$type&ontology=$ontology&query="+URLEncoder.encode(owlquerystring))) ;
   queryString = ""
-  def max = 1023 // only 1024 query terms allows in Lucene
-  if (result.size()<max) {
-    max = -1
-  }
-  if (result.size()==0) { 
-    queryString = "" 
-  } else {
-    result[0..max].each { res ->
-      if (res.label) {
-	queryString += "\"${res.label}\" OR "
+  owlquerystring.each { oqs ->
+    BooleanQuery singleQ = new BooleanQuery()
+    def result = jsonslurper.parse(new URL("http://aber-owl.net/aber-owl/service/?type=$type&ontology=$ontology&query="+URLEncoder.encode(oqs))) ;
+    def max = 1023 // only 1024 query terms allows in Lucene; TODO: use the querybuilder and change this value
+    if (result.size()<max) {
+      max = -1
+    }
+    if (result.size()==0) { 
+      queryString = "" 
+    } else {
+      result[0..max].each { res ->
+	Query q = builder.createPhraseQuery("text", "${res.label}")
+	singleQ.add(q, BooleanClause.Occur.SHOULD)
+	q = builder.createPhraseQuery("abstract", "${res.label}")
+	singleQ.add(q, BooleanClause.Occur.SHOULD)
+	q = builder.createPhraseQuery("title", "${res.label}")
+	singleQ.add(q, BooleanClause.Occur.SHOULD)
+	//	if (res.label) {
+	//	  queryString += "\"${res.label}\" OR "
+	//	}
       }
     }
+    luceneQuery.add(singleQ, BooleanClause.Occur.MUST)
   }
 }
-if (queryString.length()>3) {
-  queryString = queryString.substring(0,queryString.length()-3)
-}
+//if (queryString.length()>3) {
+//  queryString = queryString.substring(0,queryString.length()-3)
+//}
 if (textquerystring == null) {
   textquerystring = ""
 }
@@ -300,7 +316,7 @@ println """
       </center>
     </div>
 
-    <center> <input id="autocomplete" size=100% title=\"OWL query\" type='text' name='owlquery' value=\"$owlquerystring\" />
+    <center> <input id="autocomplete" size=100% title=\"OWL query\" type='text' name='owlquery' value=\"${owlquerystring[0]}\" />
 <br><br>
     <center>
       <input type=submit id="button" value="Submit">
@@ -322,16 +338,13 @@ println """
 """
 
 
-def parser = application.parser
-def searcher = application.searcher
-def analyzer = application.analyzer
-if (queryString) {
-  Query query = parser.parse("abstract:($queryString) OR text:($queryString) OR title:($queryString)")
-  ScoreDoc[] hits = searcher.search(query, null, 1000, Sort.RELEVANCE, true, true).scoreDocs
+if (luceneQuery) {
+  //  Query query = parser.parse("abstract:($queryString) OR text:($queryString) OR title:($queryString)")
+  ScoreDoc[] hits = searcher.search(luceneQuery, null, 1000, Sort.RELEVANCE, true, true).scoreDocs
   hits.each { doc ->
     Document hitDoc = searcher.doc(doc.doc)
     SimpleHTMLFormatter htmlFormatter = new SimpleHTMLFormatter()
-    Highlighter highlighter = new Highlighter(htmlFormatter, new QueryScorer(query))
+    Highlighter highlighter = new Highlighter(htmlFormatter, new QueryScorer(luceneQuery))
     highlighter.setTextFragmenter(new NullFragmenter())
     String frag = highlighter.getBestFragment(analyzer, "abstract", hitDoc.get("abstract"))
     if (frag == null) {
@@ -377,17 +390,14 @@ println """
 """
 } else if (output == "json") {
   List l = []
-  def parser = application.parser
-  def searcher = application.searcher
-  def analyzer = application.analyzer
-  if (queryString) {
-    Query query = parser.parse("abstract:($queryString) OR text:($queryString) OR title:($queryString)")
-    ScoreDoc[] hits = searcher.search(query, null, 1000, Sort.RELEVANCE, true, true).scoreDocs
+  if (luceneQuery) {
+    //    Query query = parser.parse("abstract:($queryString) OR text:($queryString) OR title:($queryString)")
+    ScoreDoc[] hits = searcher.search(luceneQuery, null, 1000, Sort.RELEVANCE, true, true).scoreDocs
     hits.each { doc ->
       Document hitDoc = searcher.doc(doc.doc)
       l << [ pmcid: hitDoc.get("pmcid"), pmid:hitDoc.get("pmid"), title:hitDoc.get("title") ]
     }
   }
-  def builder = new JsonBuilder(l)
-  print builder.toString()
+  def jsonbuilder = new JsonBuilder(l)
+  print jsonbuilder.toString()
 }
