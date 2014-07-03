@@ -15,7 +15,7 @@ import org.semanticweb.owlapi.util.*
 import org.semanticweb.elk.owlapi.*
 import groovy.json.*
 
-def fout = new PrintWriter(new BufferedWriter(new FileWriter("doid2hpo-fulltext.txt")))
+def fout = new PrintWriter(new BufferedWriter(new FileWriter(args[0])))
 
 Double npmi(Double total, Double x, Double y, Double xy) {
   Double px = x/total
@@ -142,7 +142,7 @@ id2name.each { k, v ->
   s.each { i ->
     id2name[i]?.each { name ->
       try {
-	Query q = builder.createBooleanQuery("text", "\"$name\"")
+	Query q = builder.createBooleanQuery(args[1], "\"$name\"")
 	query.add(q, BooleanClause.Occur.SHOULD)
 	//	q = builder.createBooleanQuery("title", "\"$name\"")
 	//	query.add(q, BooleanClause.Occur.SHOULD)
@@ -217,7 +217,7 @@ bsid2pmid.findAll { k, v -> k.indexOf("DOID")>-1 }.each { doid, pmids1 ->
     def lgl = lgl(corpussize, na, nb, nab)
     def name1 = id2name[doid]
     def name2 = id2name[pid]
-    fout.println("$doid\t$pid\t$tscore\t$zscore\t$lmi\t$pmi\t$lgl$nab\t$na\t$nb\t$name1\t$name2")
+    fout.println("$doid\t$pid\t$tscore\t$zscore\t$lmi\t$pmi\t$lgl\t$nab\t$na\t$nb\t$name1\t$name2")
   }
 }
 
