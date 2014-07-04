@@ -50,7 +50,7 @@ def type = request.getParameter("type")
 
 def queryString = null
 
-BooleanQuery.setMaxClauseCount(1024)
+BooleanQuery.setMaxClauseCount(3072)
 
 BooleanQuery luceneQuery = new BooleanQuery()
 if (owlquerystring != null) {
@@ -58,7 +58,7 @@ if (owlquerystring != null) {
   owlquerystring.each { oqs ->
     BooleanQuery singleQ = new BooleanQuery()
     def result = jsonslurper.parse(new URL("http://aber-owl.net/aber-owl/service/?type=$type&ontology=$ontology&query="+URLEncoder.encode(oqs))) ;
-    def max = 1023 // only 1024 query terms allows in Lucene; TODO: use the querybuilder and change this value
+    def max = 1023
     if (result.size()<max) {
       max = -1
     }
@@ -77,7 +77,9 @@ if (owlquerystring != null) {
 	//	}
       }
     }
-    luceneQuery.add(singleQ, BooleanClause.Occur.MUST)
+    try {
+      luceneQuery.add(singleQ, BooleanClause.Occur.MUST)
+    } catch (Exception E) {}
   }
 }
 //if (queryString.length()>3) {
