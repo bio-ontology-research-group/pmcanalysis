@@ -2,39 +2,43 @@
 
 
 def cutoff = new Double(args[1])
-def mincooc = 3
+def mincooc = 0
 
 def fout = new PrintWriter(new BufferedWriter(new FileWriter("filtered-doid-pheno-" + args[1] + ".txt")))
 
 def l = []
-def doid = ""
+def doid = null
 def name1 = ""
 def name2 = ""
 new File(args[0]).splitEachLine("\t") { line ->
   def id = line[0]
+  if (doid == null) {
+    doid = id
+  }
   def mp = line[1]
   def oldname1 = name1
   def oldname2 = name2
-  name1 = line[9]
-  name2 = line[10]
+  name1 = line[10]
+  name2 = line[11]
   if (id != doid) {
-    def lts = l.sort { it.tscore }.reverse() //.indexOf(exp) / lsize
+    println "Processing $doid..."
+    //    def lts = l.sort { it.tscore }.reverse() //.indexOf(exp) / lsize
     def lpmi = l.sort { it.pmi }.reverse() //.indexOf(exp) / lsize
-    def lzs = l.sort { it.zscore }.reverse() //.indexOf(exp) / lsize
-    def llmi = l.sort { it.lmi }.reverse() //.indexOf(exp) / lsize
-    def llgl = l.sort { it.lgl } //.indexOf(exp) / lsize
+    //    def lzs = l.sort { it.zscore }.reverse() //.indexOf(exp) / lsize
+    //    def llmi = l.sort { it.lmi }.reverse() //.indexOf(exp) / lsize
+    //    def llgl = l.sort { it.lgl } //.indexOf(exp) / lsize
     def lsize = l.size()
     
     for (int i = 0 ; i < lsize ; i++) {
-      lts[i].score1 = i/lsize
-      lpmi[i].score2 = i/lsize
-      lzs[i].score3 = i/lsize
-      llmi[i].score4 = i/lsize
-      llgl[i].score5 = i/lsize
+      //      lts[i].score1 = i/lsize
+      lpmi[i].score = i/lsize
+      //      lzs[i].score3 = i/lsize
+      //      llmi[i].score4 = i/lsize
+      //      llgl[i].score5 = i/lsize
     }
     for (int i = 0 ; i < lsize ; i++) {
-      def mean = (l[i].score1+l[i].score2+l[i].score3+l[i].score4+l[i].score5)/5
-      if (mean < cutoff && l[i].cooc>mincooc) {
+      def mean = l[i].score
+      if (mean < cutoff && l[i].cooc>=mincooc) {
 	fout.println("$doid\t${l[i].mp}\t${l[i].tscore}\t${l[i].zscore}\t${l[i].lmi}\t${l[i].pmi}\t${l[i].lgl}\t$mean\t$oldname1\t${l[i].name}")
       }
     }
@@ -44,7 +48,7 @@ new File(args[0]).splitEachLine("\t") { line ->
   try {
     Expando exp = new Expando()
     exp.mp = mp
-    exp.name = line[10]
+    exp.name = line[11]
     exp.tscore = new Double(line[2])
     exp.zscore = new Double(line[3])
     exp.lmi = new Double(line[4])
@@ -52,7 +56,9 @@ new File(args[0]).splitEachLine("\t") { line ->
     exp.lgl = new Double(line[6])
     exp.cooc = new Integer(line[7])
     l << exp
-  } catch (Exception E) {}
+  } catch (Exception E) {
+    println E.getMessage()
+  }
 }
 fout.flush()
 fout.close()

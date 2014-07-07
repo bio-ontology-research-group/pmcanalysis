@@ -318,7 +318,7 @@ println """
       </center>
     </div>
 
-    <center> <input id="autocomplete" size=100% title=\"OWL query\" type='text' name='owlquery' value=\"${owlquerystring[0]}\" />
+    <center> <input id="autocomplete" size=100% title=\"OWL query\" type='text' name='owlquery' value=\"${owlquerystring?.getAt(0)?:""}\" />
 <br><br>
     <center>
       <input type=submit id="button" value="Submit">
