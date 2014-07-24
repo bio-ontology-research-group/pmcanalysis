@@ -14,7 +14,7 @@ import javax.servlet.http.*
 import javax.servlet.ServletConfig
 
 class DoPhenoServer extends HttpServlet {
-  public final static String disfilename = "doid2hpo.txt"
+  public final static String disfilename = "filtered-disease-definitions-abstracts/filtered-doid-pheno-0.15.txt"
   def requestHandler
   def context
   def id2name = [:]
@@ -69,10 +69,10 @@ class DoPhenoServer extends HttpServlet {
 	exp.lmi = new Double(line[4])
 	exp.pmi = new Double(line[5])
 	exp.chi = new Double(line[6])
-	//	exp.mean = new Double(line[7])
+	exp.mean = new Double(line[7])
 	dismap[doid].add(exp)
 	exp.mpname = id2name[exp.mp]
-	def dname = line[9].trim()
+	def dname = line[8].trim()
 	dname = dname.substring(1, dname.length()-1)
 	dname.split(",").each { 
 	  it = it.trim()

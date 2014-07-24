@@ -48,13 +48,13 @@ def ontology = request.getParameter("ontology")?:""
 def output = request.getParameter("output")
 def type = request.getParameter("type")
 
-def queryString = null
+//def queryString = null
 
 BooleanQuery.setMaxClauseCount(3072)
 
 BooleanQuery luceneQuery = new BooleanQuery()
 if (owlquerystring != null) {
-  queryString = ""
+  //  queryString = ""
   owlquerystring.each { oqs ->
     BooleanQuery singleQ = new BooleanQuery()
     def result = jsonslurper.parse(new URL("http://aber-owl.net/aber-owl/service/?type=$type&ontology=$ontology&query="+URLEncoder.encode(oqs))) ;
@@ -63,18 +63,20 @@ if (owlquerystring != null) {
       max = -1
     }
     if (result.size()==0) { 
-      queryString = "" 
+      //      queryString = "" 
     } else {
       result[0..max].each { res ->
-	Query q = builder.createPhraseQuery("text", "${res.label}")
-	singleQ.add(q, BooleanClause.Occur.SHOULD)
-	q = builder.createPhraseQuery("abstract", "${res.label}")
-	singleQ.add(q, BooleanClause.Occur.SHOULD)
-	q = builder.createPhraseQuery("title", "${res.label}")
-	singleQ.add(q, BooleanClause.Occur.SHOULD)
-	//	if (res.label) {
-	//	  queryString += "\"${res.label}\" OR "
-	//	}
+	if (res.label!=null) {
+	  Query q = builder.createPhraseQuery("text", "${res.label}")
+	  singleQ.add(q, BooleanClause.Occur.SHOULD)
+	  q = builder.createPhraseQuery("abstract", "${res.label}")
+	  singleQ.add(q, BooleanClause.Occur.SHOULD)
+	  q = builder.createPhraseQuery("title", "${res.label}")
+	  singleQ.add(q, BooleanClause.Occur.SHOULD)
+	  //	if (res.label) {
+	  //	  queryString += "\"${res.label}\" OR "
+	  //	}
+	}
       }
     }
     try {
@@ -82,6 +84,7 @@ if (owlquerystring != null) {
     } catch (Exception E) {}
   }
 }
+//println luceneQuery
 //if (queryString.length()>3) {
 //  queryString = queryString.substring(0,queryString.length()-3)
 //}
@@ -153,7 +156,7 @@ println """<!doctype html>
             \$( "#button" ).button();
 	    \$( "#radioset" ).buttonset();
 
-		\$( "#autocomplete" )
+		\$( "input" )
 		.bind( "keydown", function( event ) {
 		    	if ( event.keyCode === \$.ui.keyCode.TAB &&
             		\$( this ).data( "ui-autocomplete" ).menu.active ) {
@@ -203,7 +206,12 @@ println """<!doctype html>
 	});
 
 
-
+function addBox() {
+    var newTextBoxDiv = \$(document.createElement('div'));
+    newTextBoxDiv.after().html('<center> <input id="autocomplete" size=100% title="OWL query" type="text" name="owlquery" value=""/><button onclick="addBox(); return false;">+</button>');
+    newTextBoxDiv.appendTo("#TextBoxesGroup");
+    return false ;
+}
 
 </script>
 	<style>
@@ -297,6 +305,9 @@ println """<!doctype html>
       <center>
 """
 
+print '<input type="radio" id="radio0" name="type" value="supeq"'
+if (type == "supeq") print ' checked="checked"'
+print '><label for="radio0">Super- and Equivalent classes</label>'
 print '<input type="radio" id="radio1" name="type" value="superclass"'
 if (type=="superclass") print ' checked="checked"'
 println '><label for="radio1">Superclasses</label>'
@@ -306,6 +317,9 @@ println '><label for="radio2">Equivalent classes</label>'
 print '<input type="radio" id="radio1" name="type" value="subclass"'
 if (type=="subclass") print ' checked="checked"'
 println '><label for="radio1">Subclasses</label>'
+print '<input type="radio" id="radio4" name="type" value="subeq"'
+if (type == "subeq") print ' checked="checked"'
+print '><label for="radio4">Sub- and Equivalent classes</label>'
 
 
 println """
@@ -318,7 +332,22 @@ println """
       </center>
     </div>
 
-    <center> <input id="autocomplete" size=100% title=\"OWL query\" type='text' name='owlquery' value=\"${owlquerystring?.getAt(0)?:""}\" />
+<div id='TextBoxesGroup'>
+"""
+if (owlquerystring == null || owlquerystring.size() == 0) {
+  println """
+    <center> <input id="autocomplete" size=100% title=\"OWL query\" type='text' name='owlquery' value="" /><button onclick="addBox(); return false;">+</button>
+"""
+} else {
+  owlquerystring.each { oq ->
+    println """
+    <center> <input id="autocomplete" size=100% title=\"OWL query\" type='text' name='owlquery' value=\"$oq\" /><button onclick="addBox(); return false;">+</button>
+"""
+  }
+}
+
+println """
+</div>
 <br><br>
     <center>
       <input type=submit id="button" value="Submit">

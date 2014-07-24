@@ -27,7 +27,8 @@ new File(args[0]).splitEachLine("\t") { line ->
     //    def lzs = l.sort { it.zscore }.reverse() //.indexOf(exp) / lsize
     //    def llmi = l.sort { it.lmi }.reverse() //.indexOf(exp) / lsize
     //    def llgl = l.sort { it.lgl } //.indexOf(exp) / lsize
-    def lsize = l.size()
+    lpmi.removeAll { it.pmi == Double.NaN }
+    def lsize = lpmi.size()
     
     for (int i = 0 ; i < lsize ; i++) {
       //      lts[i].score1 = i/lsize
