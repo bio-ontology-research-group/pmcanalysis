@@ -9,7 +9,7 @@ import org.apache.lucene.search.*
 import org.apache.lucene.queryparser.classic.*
 
 
-String indexPath = "lucene-medline-pmc"
+String indexPath = "lucene-medline-pmc-2"
 
 Directory ldir = FSDirectory.open(new File(indexPath))
 Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_47)
@@ -32,7 +32,22 @@ new File("medlinecorpus").eachFile { file ->
       def pmid = article.PMID.text()
       def title = article.Article.ArticleTitle.text()
       def articleAbstract = article.Article.Abstract.AbstractText.text()
+      def volume = article.Article.Journal.JournalIssue.Volume.text()
+      def issue = article.Article.Journal.JournalIssue.Issue.text()
+      def jname = article.Article.Journal.ISOAbbreviation.text()
+      def pages = article.Article.Pagination.MedlinePgn.text()
+      def authorstring = ""
+      def authors = article.Article.AuthorList.Author.each { author ->
+	def ln = author.LastName.text()
+	def initials = author.ForeName.text()
+	authorstring += ln + ", "+initials + "; "
+      }
       Document doc = new Document()
+      doc.add(new Field("pages", pages, Field.Store.YES, Field.Index.NO))
+      doc.add(new Field("jname", jname, Field.Store.YES, Field.Index.NO))
+      doc.add(new Field("volume", volume, Field.Store.YES, Field.Index.NO))
+      doc.add(new Field("issue", issue, Field.Store.YES, Field.Index.NO))
+      doc.add(new Field("authorstring", authorstring, Field.Store.YES, Field.Index.NO))
       doc.add(new Field("pmid", pmid, Field.Store.YES, Field.Index.NO))
       doc.add(new Field("title", title, TextField.TYPE_STORED))
       doc.add(new Field("abstract", articleAbstract, TextField.TYPE_STORED))
