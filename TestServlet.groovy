@@ -252,6 +252,10 @@ function addBox() {
 		text-align: center;
 		margin: 0px;
 	}
+	.articletitle {
+		text-align: left;
+		margin: 0px;
+	}
 	.list {
 	  font-family:sans-serif;
 	  padding:20px 0 0;
@@ -401,7 +405,7 @@ if (luceneQuery) {
     def pmid = hitDoc.get("pmid")
     def title = hitDoc.get("title")
     if (pmid!=null) {
-      println "<li><h3 class=\"title\"><a href=\"http://www.ncbi.nlm.nih.gov/pubmed/$pmid\">$title</a></h3>"
+      println "<li><h3 class=\"articletitle\"><a href=\"http://www.ncbi.nlm.nih.gov/pubmed/$pmid\">$title</a></h3>"
       if (pmcid!=null) {
 	println "<p><a href=\"http://www.ncbi.nlm.nih.gov/pmc/articles/PMC$pmcid\">Full text available.</a></p>"
       }
