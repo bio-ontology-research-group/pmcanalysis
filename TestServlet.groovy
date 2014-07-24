@@ -156,7 +156,9 @@ println """<!doctype html>
             \$( "#button" ).button();
 	    \$( "#radioset" ).buttonset();
 
-		\$( "input" )
+            \$( ".ac" )
+              .on("keydown.autocomplete", "input", function() {
+              \$(this)
 		.bind( "keydown", function( event ) {
 		    	if ( event.keyCode === \$.ui.keyCode.TAB &&
             		\$( this ).data( "ui-autocomplete" ).menu.active ) {
@@ -199,7 +201,7 @@ println """<!doctype html>
 	    return \$( "<li>" )
 		.append( "<a>" + item.label +"</a>" )
 		.appendTo( ul );
-	};
+	}});
 		
 		
 		
@@ -207,9 +209,56 @@ println """<!doctype html>
 
 
 function addBox() {
-    var newTextBoxDiv = \$(document.createElement('div'));
-    newTextBoxDiv.after().html('<center> <input id="autocomplete" size=100% title="OWL query" type="text" name="owlquery" value=""/><button onclick="addBox(); return false;">+</button>');
+    var newTextBoxDiv = \$(document.createElement("div")).attr("class", "ac"); //\$("#autocomplete").clone().attr("id", "autocomplete-new").val("").appendTo("#TextBoxesGroup");
+    newTextBoxDiv.after().html('<center> <input id="autocomplete-new" size=100% title="OWL query" type="text" name="owlquery" value=""/><button onclick="addBox(); return false;">+</button>');
     newTextBoxDiv.appendTo("#TextBoxesGroup");
+            \$( ".ac" )
+              .on("keydown.autocomplete", "input", function() {
+              \$(this)
+		.bind( "keydown", function( event ) {
+		    	if ( event.keyCode === \$.ui.keyCode.TAB &&
+            		\$( this ).data( "ui-autocomplete" ).menu.active ) {
+          		event.preventDefault();
+        		}
+      		})
+		.autocomplete({
+		    minLength: 3,
+		    source: function( request, response ) {
+			var ontology = \$( "#ontology option:selected" ).text();
+			\$.getJSON( "../service/", {
+			    term: extractLast( request.term ),
+			    ontology : ontology,
+			}, response );
+		    },
+		    search: function() {
+			// custom minLength
+			var term = extractLast( this.value );
+			if ( term.length < 3 ) {
+			    return false;
+			}
+		    },
+		    focus: function() {
+			// prevent value inserted on focus
+			return false;
+		    },
+		    select: function( event, ui ) {
+			var terms = split( this.value );
+			// remove the current input
+			terms.pop();
+			// add the selected item
+			terms.push( ui.item.value );
+			// add placeholder to get the comma-and-space at the end
+			terms.push( "" );
+			this.value = terms.join( " " );
+			return false;
+		    }
+		})
+	.data( "ui-autocomplete" )._renderItem = function( ul, item ) {
+	    return \$( "<li>" )
+		.append( "<a>" + item.label +"</a>" )
+		.appendTo( ul );
+	}});
+
     return false ;
 }
 
@@ -340,13 +389,28 @@ println """
 """
 if (owlquerystring == null || owlquerystring.size() == 0) {
   println """
+<div class="ac">
     <center> <input id="autocomplete" size=100% title=\"OWL query\" type='text' name='owlquery' value="" /><button onclick="addBox(); return false;">+</button>
+</div>
 """
 } else {
+  def first = true
   owlquerystring.each { oq ->
-    println """
+    if (first) {
+      first = false
+      println """
+<div class="ac">
     <center> <input id="autocomplete" size=100% title=\"OWL query\" type='text' name='owlquery' value=\"$oq\" /><button onclick="addBox(); return false;">+</button>
+</div>
 """
+    } else {
+      println """
+<div class="ac">
+    <center> <input id="autocomplete-new" size=100% title=\"OWL query\" type='text' name='owlquery' value=\"$oq\" /><button onclick="addBox(); return false;">+</button>
+</div>
+"""
+
+    }
   }
 }
 

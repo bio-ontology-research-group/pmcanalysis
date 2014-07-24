@@ -65,6 +65,30 @@ new File("pmc").eachDir { dir ->
 	def pmcid = ""
 	def pmid = ""
 	def title = ""
+	def volume = ""
+	def issue = ""
+	def year = ""
+	art.front."article-meta"."pub-date".each { d ->
+	  if (d.@"pub-type" == "ppub") {
+	    year = d.year.text()
+	  }
+	}
+	def jname = ""
+	art.front."journal-meta"."journal-id".each { ji ->
+	  if (ji.@"journal-id-type" == "nlm-ta") {
+	    jname = ji.text()
+	  }
+	}
+	def pages = ""
+	def authorstring = ""
+	art.front."article-meta"."contrib-group"."contrib".each { author ->
+	  if (author.@"contrib-type" == "author") {
+	    def surname = author.name.surname.text()
+	    def fname = author.name."given-names".text()
+	    authorstring += surname +", "+fname+"; "
+	  }
+	}
+
 	art.front."article-meta"."article-id".each { id ->
 	  if (id.@"pub-id-type" == "pmc") {
 	    pmcid = id.text()
