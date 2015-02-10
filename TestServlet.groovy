@@ -78,10 +78,10 @@ if (owlquerystring != null) {
 	  //	}
 	}
       }
+      try {
+	luceneQuery.add(singleQ, BooleanClause.Occur.MUST)
+      } catch (Exception E) {}
     }
-    try {
-      luceneQuery.add(singleQ, BooleanClause.Occur.MUST)
-    } catch (Exception E) {}
   }
 }
 //println luceneQuery
@@ -98,10 +98,19 @@ println """<!doctype html>
 <head>
 	<meta charset="utf-8">
 	<title>Aber-OWL: Pubmed - ontology-based access to biomedical literature</title>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-59233722-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
 	<link href="../css/smoothness/jquery-ui-1.10.4.custom.css" rel="stylesheet">
 	<script src="../js/jquery-1.10.2.js"></script>
 	<script src="../js/jquery-ui-1.10.4.custom.js"></script>
-
         <script>
 	    \$( "#radioset" ).buttonset();
 
@@ -210,7 +219,7 @@ println """<!doctype html>
 
 function addBox() {
     var newTextBoxDiv = \$(document.createElement("div")).attr("class", "ac"); //\$("#autocomplete").clone().attr("id", "autocomplete-new").val("").appendTo("#TextBoxesGroup");
-    newTextBoxDiv.after().html('<center> <input id="autocomplete-new" size=100% title="OWL query" type="text" name="owlquery" value=""/><button onclick="addBox(); return false;">+</button>');
+    newTextBoxDiv.after().html('<center> <input id="autocomplete-new" size=100% title="OWL query" type="text" name="owlquery" value=""/><button onclick="addBox(); return false;">+</button><a href="../"><img style="height:20px;vertical-align:middle" title="Show in Aber-OWL" src="../img/logo-owl.png" /></center>');
     newTextBoxDiv.appendTo("#TextBoxesGroup");
             \$( ".ac" )
               .on("keydown.autocomplete", "input", function() {
@@ -274,6 +283,14 @@ function addBox() {
 	  left: 0;
 	  z-index: 999;
 	  width: 95%;
+	}
+	.menubarleft {
+	  position: fixed;
+	  top: 0;
+	  left: 20px;
+	  z-index: 999;
+	  width: 95%;
+	  display: none;
 	}
 	.demoHeaders {
 		margin-top: 2em;
@@ -345,6 +362,16 @@ function addBox() {
           overflow: hidden;
           position: relative;
         }
+	.footer {
+
+	   bottom:0;
+	   left:100px;
+	   width:85%;
+	   height:60px;   /* Height of the footer */
+	   display: flex;
+	   justify-content: space-between;
+
+	}
 
 	</style>
 </head>
@@ -390,7 +417,8 @@ println """
 if (owlquerystring == null || owlquerystring.size() == 0) {
   println """
 <div class="ac">
-    <center> <input id="autocomplete" size=100% title=\"OWL query\" type='text' name='owlquery' value="" /><button onclick="addBox(); return false;">+</button>
+    <center><input id="autocomplete" size=100% title=\"OWL query\" type='text' name='owlquery' value="" /><button onclick="addBox(); return false;">+</button>
+<a href="../"><img style="height:20px;vertical-align:middle" title="Show in Aber-OWL" src="../img/logo-owl.png" /></center>
 </div>
 """
 } else {
@@ -401,12 +429,15 @@ if (owlquerystring == null || owlquerystring.size() == 0) {
       println """
 <div class="ac">
     <center> <input id="autocomplete" size=100% title=\"OWL query\" type='text' name='owlquery' value=\"$oq\" /><button onclick="addBox(); return false;">+</button>
+<a href="../#$oq"><img style="height:20px;vertical-align:middle" title="Show in Aber-OWL" src="../img/logo-owl.png" /></center>
+
 </div>
 """
     } else {
       println """
 <div class="ac">
     <center> <input id="autocomplete-new" size=100% title=\"OWL query\" type='text' name='owlquery' value=\"$oq\" /><button onclick="addBox(); return false;">+</button>
+<a href="../#$oq"><img style="height:20px;vertical-align:middle" title="Show in Aber-OWL" src="../img/logo-owl.png" /></center>
 </div>
 """
 
@@ -439,7 +470,15 @@ println """
 
 if (luceneQuery) {
   //  Query query = parser.parse("abstract:($queryString) OR text:($queryString) OR title:($queryString)")
-  ScoreDoc[] hits = searcher.search(luceneQuery, null, 1000, Sort.RELEVANCE, true, true).scoreDocs
+  ScoreDoc[] hits = searcher.search(luceneQuery, null, 10000, Sort.RELEVANCE, true, true).scoreDocs
+  def numhits = hits.size()
+  if (owlquerystring) {
+    if (numhits == 10000) {
+      println "$numhits (maximum) matching documents"
+    } else {
+      println "$numhits matching documents"
+    }
+  }
   hits.each { doc ->
     Document hitDoc = searcher.doc(doc.doc)
     SimpleHTMLFormatter htmlFormatter = new SimpleHTMLFormatter()
@@ -483,6 +522,13 @@ println """
   </div>
 
 </p>
+<p class="footer">
+<img src="../img/aber.gif" alt="Aberystwyth University" height=50 />
+<img src="../img/kaust.svg" alt="King Abdullah University of Science and
+			      Technology" height=50 />
+<img src="../img/cam.svg" alt="University of Cambridge" height=50 />
+</p>
+
 
   </body>
 </html>
