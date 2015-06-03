@@ -57,7 +57,8 @@ if (owlquerystring != null) {
   //  queryString = ""
   owlquerystring.each { oqs ->
     BooleanQuery singleQ = new BooleanQuery()
-    def result = jsonslurper.parse(new URL("http://aber-owl.net/aber-owl/service/?type=$type&ontology=$ontology&query="+URLEncoder.encode(oqs))) ;
+    def result = jsonslurper.parse(new URL("http://aber-owl.net/aber-owl/service/api/runQuery.groovy?type=$type&ontology=$ontology&query="+URLEncoder.encode(oqs)))
+    result = result['result']
     def max = 1023
     if (result.size()<max) {
       max = -1
@@ -91,6 +92,7 @@ if (owlquerystring != null) {
 if (textquerystring == null) {
   textquerystring = ""
 }
+
 
 if (output==null) { // text output
 println """<!doctype html>
@@ -134,7 +136,7 @@ println """<!doctype html>
 });
 
          \$.ajax({
-	  url:'../service/',
+	  url:'../service/api/listOntologies.groovy',
 	  type:'GET',
 	  data: 'type=listontologies',
 	  dataType: 'json',
@@ -178,7 +180,7 @@ println """<!doctype html>
 		    minLength: 3,
 		    source: function( request, response ) {
 			var ontology = \$( "#ontology option:selected" ).text();
-			\$.getJSON( "../service/", {
+			\$.getJSON( "../service/api/queryNames.groovy", {
 			    term: extractLast( request.term ),
 			    ontology : ontology,
 			}, response );
@@ -367,7 +369,7 @@ function addBox() {
 	   bottom:0;
 	   left:100px;
 	   width:85%;
-	   height:60px;   /* Height of the footer */
+	   height:60px;
 	   display: flex;
 	   justify-content: space-between;
 
@@ -467,7 +469,6 @@ println """
 
 """
 
-
 if (luceneQuery) {
   //  Query query = parser.parse("abstract:($queryString) OR text:($queryString) OR title:($queryString)")
   ScoreDoc[] hits = searcher.search(luceneQuery, null, 10000, Sort.RELEVANCE, true, true).scoreDocs
@@ -540,7 +541,27 @@ println """
     ScoreDoc[] hits = searcher.search(luceneQuery, null, 1000, Sort.RELEVANCE, true, true).scoreDocs
     hits.each { doc ->
       Document hitDoc = searcher.doc(doc.doc)
-      l << [ pmcid: hitDoc.get("pmcid"), pmid:hitDoc.get("pmid"), title:hitDoc.get("title") ]
+      SimpleHTMLFormatter htmlFormatter = new SimpleHTMLFormatter()
+      Highlighter highlighter = new Highlighter(htmlFormatter, new QueryScorer(luceneQuery))
+      highlighter.setTextFragmenter(new NullFragmenter())
+      String frag = highlighter.getBestFragment(analyzer, "abstract", hitDoc.get("abstract"))
+      if (frag == null) {
+	highlighter.setTextFragmenter(new SimpleFragmenter())
+	def text = hitDoc.get("text")
+	if (text != null) {
+	  def bestFragment = highlighter.getBestFragments(analyzer, "text", text, 5)
+	  if (bestFragment) {
+	    frag = "<em>No match found in abstract.</em> Full text matches: <ul>"
+	    bestFragment.each {
+	      frag += "<li>$it</li>\n"
+	    }
+	    frag += "</ul>"
+	  }
+	} else {
+	  frag = highlighter.getBestFragment(analyzer, "title", hitDoc.get("title"))
+	}
+      }
+      l << [ pmcid: hitDoc.get("pmcid"), pmid:hitDoc.get("pmid"), title:hitDoc.get("title"), fragment:frag ]
     }
   }
   def jsonbuilder = new JsonBuilder(l)
