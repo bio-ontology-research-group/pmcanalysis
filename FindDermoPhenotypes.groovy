@@ -15,7 +15,7 @@ import org.semanticweb.owlapi.util.*
 import org.semanticweb.elk.owlapi.*
 import groovy.json.*
 
-def fout = new PrintWriter(new BufferedWriter(new FileWriter("doid2hpo.txt")))
+def fout = new PrintWriter(new BufferedWriter(new FileWriter(args[0])))
 
 Double npmi(Double total, Double x, Double y, Double xy) {
   Double px = x/total
@@ -38,6 +38,14 @@ Double lmi(Double total, Double x, Double y, Double xy) {
   return xy * Math.log(total * xy / (x * y))
 }
 
+Double lgl(Double total, Double x, Double y, Double xy) {
+  def lambda = total * Math.log(total) - x * Math.log(x) - y * Math.log(y) + xy * Math.log(xy) + (total - x -y + xy)*Math.log(total - x -y + xy) + (x - xy) * Math.log(x-xy) + (y - xy) * Math.log(y-xy) - (total - x) * Math.log(total-x) - (total-y) * Math.log(total - y)
+
+  return xy < (x*y/total) ? -2*Math.log(lambda) : 2*Math.log(lambda)
+}
+
+
+
 def jsonslurper = new JsonSlurper()
 
 String indexPath = "lucene-medline-pmc/"
@@ -49,11 +57,13 @@ DirectoryReader reader = DirectoryReader.open(dir)
 IndexSearcher searcher = new IndexSearcher(reader)
 
 QueryParser parser = new QueryParser(Version.LUCENE_47, "text", analyzer)
+QueryBuilder builder = new QueryBuilder(analyzer)
 
 Map<String, Set<String>> id2super = [:]
+Map<String, Set<String>> id2sub = [:]
 Map<String, Set<String>> name2id = [:].withDefault { new TreeSet() }
 Map<String, Set<String>> id2name = [:].withDefault { new TreeSet() }
-
+Map<String, Set<String>> id2pmid = [:].withDefault { new TreeSet() }
 
 def id = ""
 def parseOntologies = { filename -> 
@@ -108,72 +118,115 @@ def parseOntologies = { filename ->
   
   ont.getClassesInSignature().each { cl ->
     def clst = cl.toString().replaceAll("<http://purl.obolibrary.org/obo/","").replaceAll(">","").replaceAll("_",":")
-    if (id2super[clst] == null) {
-      id2super[clst] = new TreeSet()
+    if (id2sub[clst] == null) {
+      id2sub[clst] = new TreeSet()
     }
     //    id2super[clst].add(clst)
-    reasoner.getSuperClasses(cl, false).getFlattened().each { sup ->
+    reasoner.getSubClasses(cl, false).getFlattened().each { sup ->
       def supst = sup.toString().replaceAll("<http://purl.obolibrary.org/obo/","").replaceAll(">","").replaceAll("_",":")
-      id2super[clst].add(supst)
+      id2sub[clst].add(supst)
     }
   }
 }
 
 parseOntologies("ontologies/mammalian_phenotype.obo")
 parseOntologies("ontologies/human-phenotype-ontology.obo")
-parseOntologies("ontologies/HumanDO.obo")
-
-
-//name2id.findAll { k, v -> v.findAll { it.indexOf("DOID")>-1 }.size()>0 }.each { name1, doids ->
-//  name2id.findAll { k, v -> v.findAll { it.indexOf("HP")>-1 }.size()>0 }.each { name2, hpids ->
+parseOntologies("ontologies/dermo-with-xrefs.obo")
 
 BooleanQuery.setMaxClauseCount(2048)
-id2name.findAll { k, v -> k.indexOf("DOID")>-1 }.each { doid, names1 ->
+id2name.each { k, v ->
   Set s = new TreeSet()
   s.add(k)
+  //  id2sub[k]?.each { s.add(it) }
   BooleanQuery query = new BooleanQuery()
   s.each { i ->
     id2name[i]?.each { name ->
       try {
-	Query q = builder.createPhraseQuery("abstract", name)
+	Query q = builder.createPhraseQuery(args[1], name)
 	query.add(q, BooleanClause.Occur.SHOULD)
-	q = builder.createPhraseQuery("title", name)
-	query.add(q, BooleanClause.Occur.SHOULD)
+	//	q = builder.createBooleanQuery("title", "\"$name\"")
+	//	query.add(q, BooleanClause.Occur.SHOULD)
       } catch (Exception E) {
 	E.printStackTrace()
       }
     }
   }
+
   println "Querying $k..."
-  ScoreDoc[] hits = searcher.search(query, null, 1000, Sort.RELEVANCE, true, true).scoreDocs
-  def disnum = hits.size()
-  if (disnum > 0) {
-    id2name.findAll { k, v -> (k.indexOf("HP")>-1 || k.indexOf("MP")>-1 ) }.each { hpid, names2 ->
-      def name2 = ""
-      if (names2.size() == 1) {
-	name2 = "\""+names2.first()+"\""
-      } else {
-	names2.each { name2 += "\"$it\" OR " }
-	name2 = name2.substring(0, name2.length() -3 )
-      }
-      
-      
-      query = parser.parse("abstract:($name2) OR title:($name2)") // OR text:($name2)")
-      hits = searcher.search(query, null, 1000, Sort.RELEVANCE, true, true).scoreDocs
-      def phenonum = hits.size()
-      
-      query = parser.parse("abstract:(($name2) AND ($name1)) OR title:(($name2) AND ($name1))") // OR text:(($name2) AND ($name1))")
-      hits = searcher.search(query, null, 1000, Sort.RELEVANCE, true, true).scoreDocs
-      def both = hits.size()
-      
-      def tscore = tscore(20000000, disnum, phenonum, both)
-      def pmi = npmi(20000000, disnum, phenonum, both)
-      def zscore = zscore(20000000, disnum, phenonum, both)
-      def lmi = lmi(20000000, disnum, phenonum, both)
-      fout.println("$doid\t$hpid\t$tscore\t$zscore\t$lmi\t$pmi\t$names1\t$names2")
+  ScoreDoc[] hits = null
+  try {
+    hits = searcher.search(query, null, 1000, Sort.RELEVANCE, true, true).scoreDocs
+  } catch (Exception E) {
+    E.printStackTrace()
+  }
+  hits?.each { doc ->
+    Document hitDoc = searcher.doc(doc.doc)
+    def pmid = hitDoc.get("pmid")
+    if (pmid) {
+      id2pmid[k].add(pmid)
     }
   }
-}									 
-									 
+}
+
+println "adding subclasses..."
+def id2pmidClosed = [:]
+id2pmid.each { k, v ->
+  Set s = new TreeSet(v)
+  id2sub[k].each { sub ->
+    if (sub in id2pmid.keySet()) {
+      s.addAll(id2pmid[sub])
+    }
+  }
+  id2pmidClosed[k] = s
+}
+id2pmid = id2pmidClosed
+
+
+
+Set tempSet = new LinkedHashSet()
+id2pmid.each { k, v ->
+  tempSet.addAll(v)
+}
+def corpussize = tempSet.size()
+
+println "Corpussize $corpussize..."
+//FIXME: remove
+//System.exit(0)
+
+println "Indexing PMIDs..."
+def indexPMID = [:]
+def count = 0
+tempSet.each { pmid ->
+  indexPMID[pmid] = count
+  count += 1
+}
+
+println "Generating BitSets..."
+Map<String, Set<String>> bsid2pmid = [:]
+id2pmid.each { k, v ->
+  OpenBitSet bs = new OpenBitSet(corpussize)
+  v.each { pmid ->
+    bs.set(indexPMID[pmid])
+  }
+  bsid2pmid[k] = bs
+}
+
+bsid2pmid.findAll { k, v -> (k.indexOf("DERMO")>-1 || k.indexOf("ID")>-1) }.each { doid, pmids1 ->
+  println "  Computing on $doid..."
+  bsid2pmid.findAll { k, v -> (k.indexOf("HP")>-1 || k.indexOf("MP")>-1 ) }.each { pid, pmids2 ->
+    def nab = OpenBitSet.intersectionCount(pmids1, pmids2)
+    def na = pmids1.cardinality()
+    def nb = pmids2.cardinality()
+    def tscore = tscore(corpussize, na, nb, nab)
+    def pmi = npmi(corpussize, na, nb, nab)
+    def zscore = zscore(corpussize, na, nb, nab)
+    def lmi = lmi(corpussize, na, nb, nab)
+    def lgl = lgl(corpussize, na, nb, nab)
+    def name1 = id2name[doid]
+    def name2 = id2name[pid]
+    fout.println("$doid\t$pid\t$tscore\t$zscore\t$lmi\t$pmi\t$lgl\t$nab\t$na\t$nb\t$name1\t$name2")
+  }
+}
+
 fout.flush()
 fout.close()

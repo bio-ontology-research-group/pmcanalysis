@@ -14,9 +14,9 @@ import groovy.servlet.*
 import javax.servlet.http.*
 import javax.servlet.ServletConfig
 
-class DoPhenoServer extends HttpServlet {
-  public final static String disfilename = "filtered-disease-definitions-abstracts/new-filtered-doid-pheno-0.2.txt"
-  public final static String simfilename = "mgi-similarity/complete-matrix-filtered.txt"
+class DoDermoServer extends HttpServlet {
+  public final static String disfilename = "filtered-dermo-definitions-abstracts/filtered-doid-pheno-0.05.txt"
+  public final static String simfilename = "mgi-similarity/dermo-mgi-0.05.txt"
   public final static String mgiNameFilename = "mgi-similarity/mousephenotypes-names.txt"
   public final static maxSize = 100
   def requestHandler
@@ -29,7 +29,7 @@ class DoPhenoServer extends HttpServlet {
     context = config.servletContext
   }
 
-  public DoPhenoServer() {
+  public DoDermoServer() {
     println "Reading names..."
     new File(mgiNameFilename).splitEachLine("\t") { line ->
       def id = line[0]
@@ -76,7 +76,7 @@ class DoPhenoServer extends HttpServlet {
     def jetty = new Server(port)
     def context = new ServletContextHandler(jetty, '/', ServletContextHandler.SESSIONS)
     context.resourceBase = '.'  
-    context.addServlet(GroovyServlet, '/DoPhenoInterface.groovy')
+    context.addServlet(GroovyServlet, '/DoDermoInterface.groovy')
     context.setAttribute('version', '1.0')  
     SuggestTree donames = new SuggestTree(500, new HashMap<String, Integer>());
 
@@ -120,13 +120,14 @@ class DoPhenoServer extends HttpServlet {
     context.setAttribute("donames", donames)
     context.setAttribute("name2doid", name2doid)
     context.setAttribute("dermo2mgi", dermo2mgi)
+    //    context.setAttribute("mgi2name", mgi2name)
 
     jetty.start()
   }
 
   public static void main(args) {
-    DoPhenoServer s = new DoPhenoServer()
-    s.run(9999)
+    DoDermoServer s = new DoDermoServer()
+    s.run(9998)
   }
 }
 

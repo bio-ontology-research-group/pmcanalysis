@@ -7,7 +7,6 @@
 @Grab(group='net.sourceforge.owlapi', module='owlapi-impl', version='4.2.5')
 @Grab(group='net.sourceforge.owlapi', module='owlapi-parsers', version='4.2.5')
 
-
 import org.apache.lucene.analysis.*
 import org.apache.lucene.analysis.standard.*
 import org.apache.lucene.document.*
@@ -141,25 +140,45 @@ def parseOntologies = { filename ->
 
 parseOntologies("ontologies/mp.obo")
 parseOntologies("ontologies/hp.obo")
-parseOntologies("ontologies/doid.obo")
+//parseOntologies("ontologies/dermo-with-xrefs.obo")
+//parseOntologies("ontologies/doid.obo")
+//read drug names
+new File("stitch/chemical.aliases.v3.1.tsv").splitEachLine("\t") { line ->
+  def sid = "STITCH:"+line[0]
+  def name = line[1].toLowerCase()
+  def origin = line[2]
+  if (origin in ["ChemIDplus", "IUPAC", "BioCyc", "KEGG", "LeadScope", "DrugBank", "ChEBI_ChEMBL_plus", "BIDD_Calbiochem_plus", "BIDD_BindingDB_plus", "BindingDB_ChEBI_plus", "ChEMBL_DrugBank", "ChemIDplus_LeadScope"]) {
+    id2name[sid].add(name)
+    name2id[name].add(sid)
+  }
+}
 
 BooleanQuery.setMaxClauseCount(4096)
 id2name.each { k, v ->
+  Set s = new TreeSet()
+  s.add(k)
   //  id2sub[k]?.each { s.add(it) }
   BooleanQuery query = new BooleanQuery()
-  v.each { name ->
-    try {
-      Query q = builder.createPhraseQuery(args[1], name)
-      query.add(q, BooleanClause.Occur.SHOULD)
-      q = builder.createPhraseQuery("title", name)
-      query.add(q, BooleanClause.Occur.SHOULD)
-    } catch (Exception E) {}
+  s.each { i ->
+    id2name[i]?.each { name ->
+      try {
+	Query q = builder.createPhraseQuery(args[1], name)
+	query.add(q, BooleanClause.Occur.SHOULD)
+	//	q = builder.createBooleanQuery("title", "\"$name\"")
+	//	query.add(q, BooleanClause.Occur.SHOULD)
+      } catch (Exception E) {
+	E.printStackTrace()
+      }
+    }
   }
-  println "Querying $k ($query)..."
+
+  println "Querying $k..."
   ScoreDoc[] hits = null
   try {
-    hits = searcher.search(query, null, 32768, Sort.RELEVANCE, true, true).scoreDocs
-  } catch (Exception E) {E.printStackTrace()}
+    hits = searcher.search(query, null, 1000, Sort.RELEVANCE, true, true).scoreDocs
+  } catch (Exception E) {
+    E.printStackTrace()
+  }
   hits?.each { doc ->
     Document hitDoc = searcher.doc(doc.doc)
     def pmid = hitDoc.get("pmid")
@@ -173,7 +192,7 @@ println "adding subclasses..."
 def id2pmidClosed = [:]
 id2pmid.each { k, v ->
   Set s = new TreeSet(v)
-  id2sub[k].each { sub ->
+  id2sub[k]?.each { sub ->
     if (sub in id2pmid.keySet()) {
       s.addAll(id2pmid[sub])
     }
@@ -181,6 +200,7 @@ id2pmid.each { k, v ->
   id2pmidClosed[k] = s
 }
 id2pmid = id2pmidClosed
+
 
 
 Set tempSet = new LinkedHashSet()
@@ -211,11 +231,11 @@ id2pmid.each { k, v ->
   bsid2pmid[k] = bs
 }
 
-bsid2pmid.findAll { k, v -> k.indexOf("DOID")>-1 }.each { doid, pmids1 ->
-  println "Computing on $doid..."
+bsid2pmid.findAll { k, v -> (k.indexOf("STITCH")>-1) }.each { doid, pmids1 ->
+  println "  Computing on $doid..."
   bsid2pmid.findAll { k, v -> (k.indexOf("HP")>-1 || k.indexOf("MP")>-1 ) }.each { pid, pmids2 ->
     def nab = OpenBitSet.intersectionCount(pmids1, pmids2)
-    //    if (nab > 0 ) {
+    if (nab > 0) {
       def na = pmids1.cardinality()
       def nb = pmids2.cardinality()
       def tscore = tscore(corpussize, na, nb, nab)
@@ -227,7 +247,7 @@ bsid2pmid.findAll { k, v -> k.indexOf("DOID")>-1 }.each { doid, pmids1 ->
       def name2 = id2name[pid]
       fout.println("$doid\t$pid\t$tscore\t$zscore\t$lmi\t$pmi\t$lgl\t$nab\t$na\t$nb\t$name1\t$name2")
     }
-  //  }
+  }
 }
 
 fout.flush()

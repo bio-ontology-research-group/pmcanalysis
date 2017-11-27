@@ -23,20 +23,25 @@ new File(args[0]).splitEachLine("\t") { line ->
   if (id != doid) {
     println "Processing $doid..."
     //    def lts = l.sort { it.tscore }.reverse() //.indexOf(exp) / lsize
-    l = l.sort { it.pmi }.reverse() //.indexOf(exp) / lsize
+    def lpmi = l.sort { it.pmi }.reverse() //.indexOf(exp) / lsize
     //    def lzs = l.sort { it.zscore }.reverse() //.indexOf(exp) / lsize
     //    def llmi = l.sort { it.lmi }.reverse() //.indexOf(exp) / lsize
     //    def llgl = l.sort { it.lgl } //.indexOf(exp) / lsize
-    l.removeAll { it.pmi == Double.NaN }
-    def lsize = l.size()
+    lpmi.removeAll { it.pmi == Double.NaN }
+    def lsize = lpmi.size()
     
-    for (int i = 0 ; i < cutoff && i < lsize ; i++) {
+    for (int i = 0 ; i < lsize ; i++) {
       //      lts[i].score1 = i/lsize
-      //      lpmi[i].score = i/lsize
-      fout.println("$doid\t${l[i].mp}\t${l[i].tscore}\t${l[i].zscore}\t${l[i].lmi}\t${l[i].pmi}\t${l[i].lgl}\t0\t$oldname1\t${l[i].name}")
+      lpmi[i].score = i/lsize
       //      lzs[i].score3 = i/lsize
       //      llmi[i].score4 = i/lsize
       //      llgl[i].score5 = i/lsize
+    }
+    for (int i = 0 ; i < lsize ; i++) {
+      def mean = l[i].score
+      if (mean < cutoff && l[i].cooc>=mincooc) {
+	fout.println("$doid\t${l[i].mp}\t${l[i].tscore}\t${l[i].zscore}\t${l[i].lmi}\t${l[i].pmi}\t${l[i].lgl}\t$mean\t$oldname1\t${l[i].name}")
+      }
     }
     doid = id
     l = []

@@ -40,7 +40,7 @@ Double lmi(Double total, Double x, Double y, Double xy) {
 
 def jsonslurper = new JsonSlurper()
 
-String indexPath = "lucene-medline-pmc/"
+String indexPath = "lucene-medline-2017/"
 
 Directory dir = FSDirectory.open(new File(indexPath)) 
 Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_47)
@@ -121,8 +121,8 @@ def parseOntologies = { filename ->
   }
 }
 
-parseOntologies("ontologies/mammalian_phenotype.obo")
-parseOntologies("ontologies/human-phenotype-ontology.obo")
+parseOntologies("ontologies/mp.obo")
+parseOntologies("ontologies/hp.obo")
 parseOntologies("ontologies/chebi.obo")
 
 
