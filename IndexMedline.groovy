@@ -26,7 +26,7 @@ IndexWriter writer = new IndexWriter(ldir, iwc)
 XmlSlurper slurper = new XmlSlurper(false, false)
 slurper.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
 slurper.setFeature("http://apache.org/xml/features/disallow-doctype-decl", false)
-
+/* //Uncomment this part for Full text indexing
 new File("pmc").eachDir { dir ->
   dir.eachFile { file ->
     if (file.toString().endsWith("nxml")) {
@@ -87,13 +87,13 @@ new File("pmc").eachDir { dir ->
     }
   }
 }
-
+*/
 new File("medlinecorpus-2017").eachFile { file ->
   println file
   if (file.toString().endsWith("xml")) {
     
     abstracts = slurper.parse(file)
-    abstracts.MedlineCitation.each { article ->
+    abstracts.PubmedArticle.MedlineCitation.each { article ->
       def pmid = article.PMID.text()
       def title = article.Article.ArticleTitle.text()
       def articleAbstract = article.Article.Abstract.AbstractText.text()
