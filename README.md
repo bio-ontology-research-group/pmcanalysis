@@ -112,7 +112,6 @@ to run EvalDOMGI.groovy on clusters use a shell script like below and submit it 
 
 echo "Job ID=$SLURM_JOB_ID,  Running task:$SLURM_ARRAY_TASK_ID" 
 
-#  Use this command to run the Whatizit annotation pipeline
 INPUT_DIR="/scratch/dragon/intel/kafkass/disease_phenotypes/auc"; #path to read
 OUTPUT_DIR="/scratch/dragon/intel/kafkass/disease_phenotypes/auc/rates"; #path to write
 values=$(grep "^${SLURM_ARRAY_TASK_ID}:" $INPUT_DIR/fileNames.txt) #file containing index:input_file_name
