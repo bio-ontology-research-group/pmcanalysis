@@ -21,11 +21,13 @@ by default, that's medlinecorpus-2017 for the Medline script, "pmc" for the othe
 
 3.1 for the implemented measures, the complete list and description is here: http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.471.5863&rep=rep1&type=pdf
 
-4. This is generic and works for any pair of ontologies, or set of ids/labels and ontology. FindDrugEffects.groovy does this for drugs and phenotypes (never published).
+4. This is a generic pipleine and works for any pair of ontologies, or set of ids/labels and ontology. FindDrugEffects.groovy does this for drugs and phenotypes (never published).
 
-Steps for AUC calculation to select the best thereshold for disease-phenotypes:
+Text mining results (obtained at the end of the 3rd step above) should be evaluted in order to select a cut-off (e.g. rank based on NPMI score) for the extracts. This can be done by evaluating the text mining dataset againt a selected reference dataset. We applied the following steps for AUC calculation to select the best thereshold for disease-phenotypes:
+
 STEP 0. Run filter_rankList.pl 
 this perl script calls  FilterDOPheno.groovy from the pmcanalysis folder for 100 times and generates 100 files with the n (1..100) top phenotypes for the given diseases. 
+
 e.g. "groovy FilterDOPheno doid2hpo.txt 80 will generate a ranked list with the top 80 phenotypes for each disease"
 Caution: The input file to be used is hard coded in the perl script.
 
